@@ -70,9 +70,10 @@ boot-image/container/index.json: .build
 	rm -rf boot-image/container
 	skopeo copy containers-storage:$(IMAGE) oci:boot-image/container
 
-boot-image/bootc-install$(ISO_SUFFIX).iso: boot-image/bootc$(ISO_SUFFIX).ks boot-image/rhel-$(RHEL_VERSION)-aarch64-boot.iso boot-image/container/index.json
+boot-image/bootc-install$(ISO_SUFFIX).iso: boot-image/bootc$(ISO_SUFFIX).ks boot-image/container/index.json boot-image/rhel-$(RHEL_VERSION)-aarch64-boot.iso boot-image/container/index.json
 	@if [ -e $@ ]; then rm -f $@; fi
-	sudo mkksiso --add boot-image/container --ks $< boot-image/rhel-$(RHEL_VERSION)-aarch64-boot.iso $@
+	sudo skopeo copy oci:boot-image/container containers-storage:$(IMAGE)
+	sudo $(RUNTIME) run --rm -it --security-opt=label=disable --arch aarch64 --pull=never --cap-add=all --privileged --device=/dev/fuse --entrypoint bash -v /var/tmp/buildah-cache-$$UID/8a2a6a29aeebc33c:/var/cache/dnf -v $$PWD:/workdir --workdir /workdir $(IMAGE) -c 'dnf -y install lorax; mkksiso --add boot-image/container --ks $< boot-image/rhel-$(RHEL_VERSION)-aarch64-boot.iso $@'
 
 .PHONY: iso
 iso: boot-image/bootc-install$(ISO_SUFFIX).iso
