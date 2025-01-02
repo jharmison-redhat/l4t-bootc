@@ -90,3 +90,21 @@ clean:
 .PHONY: list
 list:
 	@LC_ALL=C $(MAKE) -pRrq -f $(firstword $(MAKEFILE_LIST)) : 2>/dev/null | awk -v RS= -F: '/(^|\n)# Files(\n|$$)/,/(^|\n)# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' | sort | grep -E -v -e '^[^[:alnum:]]' -e '^$@$$'
+
+tmp/firmware.tbz2:
+	curl -Lo $@ https://developer.nvidia.com/downloads/igx/v1.0.0/jetson_linux_r36.3.1_aarch64.tbz2
+
+tmp/Linux_for_Tegra/flash.sh: tmp/firmware.tbz2
+	rm -rf $(dir $@)
+	tar xf $< -C ./tmp
+	touch tmp/Linux_for_Tegra/flash.sh
+
+tmp/.venv/bin/pip: hack/firmware-requirements.txt
+	rm -rf tmp/.venv
+	python3 -m venv tmp/.venv
+	tmp/.venv/bin/pip install setuptools wheel
+	tmp/.venv/bin/pip install -r hack/firmware-requirements.txt
+
+.PHONY: write-firmware
+write-firmware: tmp/.venv/bin/pip tmp/Linux_for_Tegra/flash.sh
+	hack/update-firmware.sh
