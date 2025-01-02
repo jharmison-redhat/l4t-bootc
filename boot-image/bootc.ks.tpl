@@ -38,10 +38,11 @@ done
 
 cat << EOF > /tmp/part-include
 # Clear installation disk
-clearpart --initlabel --all --disklabel msdos --drives ${install_disk}
+clearpart --initlabel --all --disklabel gpt --drives ${install_disk}
 
-# Configure /boot
+# Configure /boot and /boot/efi
 part /boot --size 1024 --fstype xfs --ondisk ${install_disk} --label boot
+part /boot/efi --size 256 --fstype efi --ondisk ${install_disk}
 
 # Fixed 20Gi partition for installation root
 part / --size 20480 --fstype xfs --ondisk ${install_disk} --label root
