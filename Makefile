@@ -7,7 +7,7 @@ TAG ?= latest
 REG_REPO := $(REGISTRY)/$(REPOSITORY)
 IMAGE = $(REG_REPO):$(TAG)
 BASE ?= registry.redhat.io/rhel9/rhel-bootc:$(RHEL_VERSION)
-LATEST_DIGEST := $(shell hack/latest_base.sh $(BASE) aarch64)
+LATEST_DIGEST := $(shell hack/latest_base.sh $(BASE) arm64)
 
 USERNAME := core
 PASSWORD := password
