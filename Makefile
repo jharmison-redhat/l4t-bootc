@@ -9,8 +9,8 @@ IMAGE = $(REG_REPO):$(TAG)
 BASE ?= registry.redhat.io/rhel9/rhel-bootc:$(RHEL_VERSION)
 LATEST_DIGEST := $(shell hack/latest_base.sh $(BASE) aarch64)
 
-USERNAME ?= core
-PASSWORD ?= password
+USERNAME := core
+PASSWORD := password
 
 # Vars only for building the kickstart-based installer
 DEFAULT_INSTALL_DISK ?= mmcblk0
@@ -45,7 +45,7 @@ boot-image/rhel-$(RHEL_VERSION)-aarch64-boot.iso:
 tmp/$(LATEST_DIGEST):
 	@touch $@
 
-.build: Containerfile overlays/auth/etc/ostree/auth.json overlays/users/usr/local/ssh/core.keys $(shell find overlays -type f) tmp/$(LATEST_DIGEST)
+.build: Containerfile overlays/auth/etc/ostree/auth.json overlays/users/usr/local/ssh/$(USERNAME).keys $(shell find overlays -type f) tmp/$(LATEST_DIGEST)
 	$(RUNTIME) build --security-opt label=disable --arch aarch64 --pull=newer --cap-add=all --device=/dev/fuse --from $(BASE) . -t $(IMAGE)
 	@touch $@
 
@@ -85,3 +85,7 @@ burn: boot-image/bootc-install$(ISO_SUFFIX).iso
 clean:
 	rm -rf .build* .push* boot-image/*.iso boot-image/*.ks
 	buildah prune -f
+
+.PHONY: list
+list:
+	@LC_ALL=C $(MAKE) -pRrq -f $(firstword $(MAKEFILE_LIST)) : 2>/dev/null | awk -v RS= -F: '/(^|\n)# Files(\n|$$)/,/(^|\n)# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' | sort | grep -E -v -e '^[^[:alnum:]]' -e '^$@$$'
