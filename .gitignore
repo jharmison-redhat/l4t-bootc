@@ -5,4 +5,5 @@ auth.json
 .push
 boot-image/container
 tmp/*
+overlays/users/usr/local/ssh/*.keys
 !tmp/.gitkeep
