@@ -10,6 +10,7 @@ BASE ?= registry.redhat.io/rhel9/rhel-bootc:$(RHEL_VERSION)
 LATEST_DIGEST := $(shell hack/latest_base.sh $(BASE) arm64)
 
 # Vars only for building the kickstart-based installer
+INSTALLER_VERSION ?= 9-latest
 DEFAULT_INSTALL_DISK ?= mmcblk0
 BOOT_VERSION ?= $(RHEL_VERSION)
 ISO_SUFFIX ?=
@@ -30,13 +31,27 @@ KICKSTART_VARS = IMAGE=$(IMAGE) \
 all: .push-$(TAG)
 
 overlays/users/usr/local/ssh/core.keys:
-	@if [ -e "$@" ]; then touch "$@"; else echo "Please put the authorized_keys file you would like for the core user in $@" >&2; exit 1; fi
+	@if [ -e "$@" ]; then \
+		touch "$@"; \
+	else \
+		echo "Please put the authorized_keys file you would like for the core user in $@" >&2; \
+		exit 1; \
+	fi
 
 overlays/auth/etc/ostree/auth.json:
-	@if [ -e "$@" ]; then touch "$@"; else echo "Please put the auth.json for your registry $(REGISTRY)/$(REPOSITORY) in $@" >&2; exit 1; fi
+	@if [ -e "$@" ]; then \
+		touch "$@"; \
+	else \
+		echo "Please put the auth.json for your registry $(REG_REPO) in $@" >&2; \
+		exit 1; \
+	fi
 
-boot-image/rhel-$(RHEL_VERSION)-aarch64-boot.iso:
-	@if [ -e "$@" ]; then touch "$@"; else echo "Please download the RHEL boot ISO from https://access.redhat.com/downloads/content/419/ver=/rhel---9/9.4/aarch64/product-software to place in $@" >&2; exit 1; fi
+boot-image/CentOS-Stream-$(INSTALLER_VERSION)-aarch64-boot.iso:
+	@if [ -e "$@" ]; then \
+		touch "$@"; \
+	else \
+		curl -Lo $@ https://mirror.stream.centos.org/$(word 1,$(subst -, ,$(INSTALLER_VERSION)))-stream/BaseOS/aarch64/iso/CentOS-Stream-$(INSTALLER_VERSION)-aarch64-boot.iso; \
+	fi
 
 tmp/$(LATEST_DIGEST):
 	@touch $@
@@ -66,10 +81,11 @@ boot-image/container/index.json: .build-$(TAG)
 	rm -rf boot-image/container
 	skopeo copy containers-storage:$(IMAGE) oci:boot-image/container
 
-boot-image/bootc-install$(ISO_SUFFIX).iso: boot-image/bootc$(ISO_SUFFIX).ks boot-image/container/index.json boot-image/rhel-$(RHEL_VERSION)-aarch64-boot.iso boot-image/container/index.json
+boot-image/bootc-install$(ISO_SUFFIX).iso: boot-image/bootc$(ISO_SUFFIX).ks boot-image/container/index.json boot-image/CentOS-Stream-$(INSTALLER_VERSION)-aarch64-boot.iso
 	@if [ -e $@ ]; then rm -f $@; fi
 	sudo skopeo copy oci:boot-image/container containers-storage:$(IMAGE)
-	sudo $(RUNTIME) run --rm -it --security-opt=label=disable --arch aarch64 --pull=never --cap-add=all --privileged --device=/dev/fuse --entrypoint bash -v /var/tmp/buildah-cache-$$UID/8a2a6a29aeebc33c:/var/cache/dnf -v $$PWD:/workdir --workdir /workdir $(IMAGE) -c 'dnf -y install lorax; mkksiso --add boot-image/container --ks $< boot-image/rhel-$(RHEL_VERSION)-aarch64-boot.iso $@'
+	sudo $(RUNTIME) run --rm -it --security-opt=label=disable --arch aarch64 --pull=never --cap-add=all --privileged --device=/dev/fuse --entrypoint bash -v /var/tmp/buildah-cache-$$UID/8a2a6a29aeebc33c:/var/cache/dnf -v $$PWD:/workdir --workdir /workdir $(IMAGE) -c \
+		'dnf -y install lorax; mkksiso --add boot-image/container --ks $< boot-image/CentOS-Stream-$(INSTALLER_VERSION)-aarch64-boot.iso $@'
 
 .PHONY: iso
 iso: boot-image/bootc-install$(ISO_SUFFIX).iso
