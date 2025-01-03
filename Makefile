@@ -84,8 +84,9 @@ boot-image/container/index.json: .build-$(TAG)
 
 boot-image/bootc-install$(ISO_SUFFIX).iso: boot-image/bootc$(ISO_SUFFIX).ks boot-image/container/index.json boot-image/CentOS-Stream-$(INSTALLER_VERSION)-aarch64-boot.iso
 	@if [ -e $@ ]; then rm -f $@; fi
-	sudo $(RUNTIME) run --rm -it --security-opt=label=disable --arch aarch64 --pull=newer --cap-add=all --privileged --device=/dev/fuse --entrypoint bash -v /var/tmp/buildah-cache-$$UID/8a2a6a29aeebc33c:/var/cache/libdnf5 -v $$PWD:/workdir --workdir /workdir quay.io/fedora/fedora-bootc:41 -c \
-		'dnf -y --setopt=install_weak_deps=False --setopt=keepcache=True install lorax; mkksiso --help; mkksiso --add boot-image/container --ks $< --replace "CentOS Stream $(INSTALLER_SHORT_VERSION)" "$(IMAGE)" boot-image/CentOS-Stream-$(INSTALLER_VERSION)-aarch64-boot.iso $@'
+	sudo $(RUNTIME) build --arch aarch64 --pull=newer -f hack/Containerfile.lorax -t mkksiso
+	sudo $(RUNTIME) run --rm -it --security-opt=label=disable --arch aarch64 --pull=newer --cap-add=all --privileged --device=/dev/fuse -v $$PWD:/workdir --workdir /workdir mkksiso \
+		--add boot-image/container --ks $< --replace "CentOS Stream $(INSTALLER_SHORT_VERSION)" "$(IMAGE)" boot-image/CentOS-Stream-$(INSTALLER_VERSION)-aarch64-boot.iso $@
 
 .PHONY: iso
 iso: boot-image/bootc-install$(ISO_SUFFIX).iso
