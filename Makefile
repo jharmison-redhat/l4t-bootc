@@ -27,7 +27,7 @@ KICKSTART_VARS = IMAGE=$(IMAGE) \
 
 
 .PHONY: all
-all: .push
+all: .push-$(TAG)
 
 overlays/users/usr/local/ssh/core.keys:
 	@if [ -e "$@" ]; then touch "$@"; else echo "Please put the authorized_keys file you would like for the core user in $@" >&2; exit 1; fi
@@ -41,19 +41,19 @@ boot-image/rhel-$(RHEL_VERSION)-aarch64-boot.iso:
 tmp/$(LATEST_DIGEST):
 	@touch $@
 
-.build: Containerfile overlays/auth/etc/ostree/auth.json overlays/users/usr/local/ssh/core.keys $(shell find overlays -type f) tmp/$(LATEST_DIGEST)
+.build-$(TAG): Containerfile overlays/auth/etc/ostree/auth.json overlays/users/usr/local/ssh/core.keys $(shell find overlays -type f) tmp/$(LATEST_DIGEST)
 	$(RUNTIME) build --security-opt label=disable --arch aarch64 --pull=newer --cap-add=all --device=/dev/fuse --from $(BASE) . -t $(IMAGE)
 	@touch $@
 
 .PHONY: build
-build: .build
+build: .build-$(TAG)
 
-.push: .build
+.push-$(TAG): .build-$(TAG)
 	$(RUNTIME) push $(IMAGE)
 	@touch $@
 
 .PHONY: push
-push: .push
+push: .push-$(TAG)
 
 .PHONY: debug
 debug:
@@ -62,7 +62,7 @@ debug:
 boot-image/bootc$(ISO_SUFFIX).ks: boot-image/bootc.ks.tpl
 	$(KICKSTART_VARS) envsubst '$$IMAGE,$$DEFAULT_DISK,$$NETWORK,$$TZ,$$ROOT_SSH_KEY' < $< >$@
 
-boot-image/container/index.json: .build
+boot-image/container/index.json: .build-$(TAG)
 	rm -rf boot-image/container
 	skopeo copy containers-storage:$(IMAGE) oci:boot-image/container
 
