@@ -84,8 +84,9 @@ boot-image/container/index.json: .build-$(TAG)
 
 boot-image/bootc-install$(ISO_SUFFIX).iso: boot-image/bootc$(ISO_SUFFIX).ks boot-image/container/index.json boot-image/CentOS-Stream-$(INSTALLER_VERSION)-aarch64-boot.iso
 	@if [ -e $@ ]; then rm -f $@; fi
-	sudo $(RUNTIME) build --arch aarch64 --pull=newer -f hack/Containerfile.lorax -t localhost/mkksiso:latest
-	sudo $(RUNTIME) run --rm -it --security-opt=label=disable --arch aarch64 --pull=newer --cap-add=all --privileged --device=/dev/fuse -v $$PWD:/workdir --workdir /workdir localhost/mkksiso:latest \
+	sudo $(RUNTIME) build --arch aarch64 --pull=newer -f hack/Containerfile.lorax -t localhost/lorax:latest
+	sudo $(RUNTIME) run --rm -it --security-opt=label=disable --arch aarch64 --pull=never --cap-add=all --privileged --device=/dev/fuse -v $$PWD:/workdir --workdir /workdir --entrypoint ksvalidator localhost/lorax:latest --version RHEL$(INSTALLER_SHORT_VERSION) $<
+	sudo $(RUNTIME) run --rm -it --security-opt=label=disable --arch aarch64 --pull=never --cap-add=all --privileged --device=/dev/fuse -v $$PWD:/workdir --workdir /workdir localhost/lorax:latest \
 		--add boot-image/container --ks $< --replace "CentOS Stream $(INSTALLER_SHORT_VERSION)" "$(IMAGE)" boot-image/CentOS-Stream-$(INSTALLER_VERSION)-aarch64-boot.iso $@
 
 .PHONY: iso
