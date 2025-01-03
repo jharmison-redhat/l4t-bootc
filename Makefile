@@ -27,7 +27,8 @@ KICKSTART_VARS = IMAGE=$(IMAGE) \
 	USERNAME=$(USERNAME) \
 	PASSWORD="$(PASSWORD)" \
 	NETWORK="$(NETWORK)" \
-	TZ=$(TZ)
+	TZ=$(TZ) \
+	ROOT_SSH_KEY="$(shell cat overlays/users/usr/local/ssh/$(USERNAME).keys 2>/dev/null)"
 
 
 .PHONY: all
@@ -64,7 +65,7 @@ debug:
 	$(RUNTIME) run --rm -it --arch aarch64 --pull=never --entrypoint /bin/bash -v /var/tmp/buildah-cache-$$UID/8a2a6a29aeebc33c:/var/cache/dnf $(IMAGE) -li
 
 boot-image/bootc$(ISO_SUFFIX).ks: boot-image/bootc.ks.tpl
-	$(KICKSTART_VARS) envsubst '$$IMAGE,$$USERNAME,$$DEFAULT_DISK,$$PASSWORD,$$NETWORK,$$TZ' < $< >$@
+	$(KICKSTART_VARS) envsubst '$$IMAGE,$$USERNAME,$$DEFAULT_DISK,$$PASSWORD,$$NETWORK,$$TZ,$$ROOT_SSH_KEY' < $< >$@
 
 boot-image/container/index.json: .build
 	rm -rf boot-image/container

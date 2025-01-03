@@ -88,7 +88,9 @@ ostreecontainer --url=/run/install/repo/container --transport=oci --no-signature
 
 services --enabled=sshd
 
+# Inject an SSH key for root
 rootpw --lock
+sshkey --username root "${ROOT_SSH_KEY}"
 
 # Configure our user
 user --name=${USERNAME} --groups=wheel,video --password="${PASSWORD}" --plaintext
