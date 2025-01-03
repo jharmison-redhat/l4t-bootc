@@ -89,7 +89,6 @@ ostreecontainer --url=/run/install/repo/container --transport=oci --no-signature
 services --enabled=sshd
 
 # Inject an SSH key for root
-rootpw --lock
 sshkey --username root "${ROOT_SSH_KEY}"
 
 %post --log=/var/roothome/ks-post.log
