@@ -92,9 +92,6 @@ services --enabled=sshd
 rootpw --lock
 sshkey --username root "${ROOT_SSH_KEY}"
 
-# Configure our user
-user --name=${USERNAME} --groups=wheel,video --password="${PASSWORD}" --plaintext
-
 %post --log=/var/roothome/ks-post.log
 #!/bin/bash
 

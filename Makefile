@@ -9,9 +9,6 @@ IMAGE = $(REG_REPO):$(TAG)
 BASE ?= registry.redhat.io/rhel9/rhel-bootc:$(RHEL_VERSION)
 LATEST_DIGEST := $(shell hack/latest_base.sh $(BASE) arm64)
 
-USERNAME := core
-PASSWORD := password
-
 # Vars only for building the kickstart-based installer
 DEFAULT_INSTALL_DISK ?= mmcblk0
 BOOT_VERSION ?= $(RHEL_VERSION)
@@ -24,18 +21,16 @@ TZ := America/New_York
 # Templating the kickstart variables is tricky
 KICKSTART_VARS = IMAGE=$(IMAGE) \
 	DEFAULT_DISK=$(DEFAULT_INSTALL_DISK) \
-	USERNAME=$(USERNAME) \
-	PASSWORD="$(PASSWORD)" \
 	NETWORK="$(NETWORK)" \
 	TZ=$(TZ) \
-	ROOT_SSH_KEY="$(shell cat overlays/users/usr/local/ssh/$(USERNAME).keys 2>/dev/null)"
+	ROOT_SSH_KEY="$(shell cat overlays/users/usr/local/ssh/core.keys 2>/dev/null)"
 
 
 .PHONY: all
 all: .push
 
-overlays/users/usr/local/ssh/$(USERNAME).keys:
-	@if [ -e "$@" ]; then touch "$@"; else echo "Please put the authorized_keys file you would like for the $(USERNAME) user in $@" >&2; exit 1; fi
+overlays/users/usr/local/ssh/core.keys:
+	@if [ -e "$@" ]; then touch "$@"; else echo "Please put the authorized_keys file you would like for the core user in $@" >&2; exit 1; fi
 
 overlays/auth/etc/ostree/auth.json:
 	@if [ -e "$@" ]; then touch "$@"; else echo "Please put the auth.json for your registry $(REGISTRY)/$(REPOSITORY) in $@" >&2; exit 1; fi
@@ -46,7 +41,7 @@ boot-image/rhel-$(RHEL_VERSION)-aarch64-boot.iso:
 tmp/$(LATEST_DIGEST):
 	@touch $@
 
-.build: Containerfile overlays/auth/etc/ostree/auth.json overlays/users/usr/local/ssh/$(USERNAME).keys $(shell find overlays -type f) tmp/$(LATEST_DIGEST)
+.build: Containerfile overlays/auth/etc/ostree/auth.json overlays/users/usr/local/ssh/core.keys $(shell find overlays -type f) tmp/$(LATEST_DIGEST)
 	$(RUNTIME) build --security-opt label=disable --arch aarch64 --pull=newer --cap-add=all --device=/dev/fuse --from $(BASE) . -t $(IMAGE)
 	@touch $@
 
@@ -65,7 +60,7 @@ debug:
 	$(RUNTIME) run --rm -it --arch aarch64 --pull=never --entrypoint /bin/bash -v /var/tmp/buildah-cache-$$UID/8a2a6a29aeebc33c:/var/cache/dnf $(IMAGE) -li
 
 boot-image/bootc$(ISO_SUFFIX).ks: boot-image/bootc.ks.tpl
-	$(KICKSTART_VARS) envsubst '$$IMAGE,$$USERNAME,$$DEFAULT_DISK,$$PASSWORD,$$NETWORK,$$TZ,$$ROOT_SSH_KEY' < $< >$@
+	$(KICKSTART_VARS) envsubst '$$IMAGE,$$DEFAULT_DISK,$$NETWORK,$$TZ,$$ROOT_SSH_KEY' < $< >$@
 
 boot-image/container/index.json: .build
 	rm -rf boot-image/container

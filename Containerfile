@@ -18,3 +18,5 @@ RUN --mount=type=tmpfs,target=/var/cache --mount=type=cache,id=dnf-cache,target=
 
 # Basic user configuration with nss-altfiles
 COPY overlays/users/ /
+RUN useradd -m core && \
+    chown core:core /usr/local/ssh/core.keys
