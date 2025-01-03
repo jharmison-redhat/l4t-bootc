@@ -84,8 +84,8 @@ burn: boot-image/bootc-install$(ISO_SUFFIX).iso
 
 .PHONY: clean
 clean:
-	rm -rf .build* .push* boot-image/*.iso boot-image/*.ks
-	buildah prune -f
+	rm -rf .build* .push* boot-image/bootc-install.iso boot-image/*.ks
+	buildah prune -af
 
 .PHONY: list
 list:
