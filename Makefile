@@ -10,6 +10,8 @@ BASE ?= registry.redhat.io/rhel9/rhel-bootc:$(RHEL_VERSION)
 LATEST_DIGEST := $(shell hack/latest_base.sh $(BASE) arm64)
 
 # Vars only for building the kickstart-based installer
+INSTALLER_VERSION ?= 9-latest
+INSTALLER_SHORT_VERSION := $(word 1,$(subst -, ,$(INSTALLER_VERSION)))
 DEFAULT_INSTALL_DISK ?= mmcblk0
 BOOT_VERSION ?= $(RHEL_VERSION)
 ISO_SUFFIX ?=
@@ -45,12 +47,11 @@ overlays/auth/etc/ostree/auth.json:
 		exit 1; \
 	fi
 
-boot-image/rhel-$(RHEL_VERSION)-aarch64-boot.iso:
+boot-image/CentOS-Stream-$(INSTALLER_VERSION)-aarch64-boot.iso:
 	@if [ -e "$@" ]; then \
 		touch "$@"; \
 	else \
-		echo "Please download the RHEL boot ISO from https://access.redhat.com/downloads/content/419/ver=/rhel---9/9.4/aarch64/product-software to place in $@" >&2; \
-		exit 1; \
+		curl -Lo $@ https://mirror.stream.centos.org/$(INSTALLER_SHORT_VERSION)-stream/BaseOS/aarch64/iso/CentOS-Stream-$(INSTALLER_VERSION)-aarch64-boot.iso; \
 	fi
 
 tmp/$(LATEST_DIGEST):
@@ -81,12 +82,12 @@ boot-image/container/index.json: .build-$(TAG)
 	rm -rf boot-image/container
 	skopeo copy containers-storage:$(IMAGE) oci:boot-image/container
 
-boot-image/bootc-install$(ISO_SUFFIX).iso: boot-image/bootc$(ISO_SUFFIX).ks boot-image/container/index.json boot-image/rhel-$(RHEL_VERSION)-aarch64-boot.iso
+boot-image/bootc-install$(ISO_SUFFIX).iso: boot-image/bootc$(ISO_SUFFIX).ks boot-image/container/index.json boot-image/CentOS-Stream-$(INSTALLER_VERSION)-aarch64-boot.iso
 	@if [ -e $@ ]; then rm -f $@; fi
 	sudo $(RUNTIME) build --arch aarch64 --pull=newer -f hack/Containerfile.lorax -t localhost/lorax:latest
 	sudo $(RUNTIME) run --rm -it --security-opt=label=disable --arch aarch64 --pull=never --cap-add=all --privileged --device=/dev/fuse -v $$PWD:/workdir --workdir /workdir --entrypoint ksvalidator localhost/lorax:latest --version RHEL$(INSTALLER_SHORT_VERSION) $<
 	sudo $(RUNTIME) run --rm -it --security-opt=label=disable --arch aarch64 --pull=never --cap-add=all --privileged --device=/dev/fuse -v $$PWD:/workdir --workdir /workdir localhost/lorax:latest \
-		--add boot-image/container --ks $< --replace "CentOS Stream $(INSTALLER_SHORT_VERSION)" "$(IMAGE)" boot-image/rhel-$(RHEL_VERSION)-aarch64-boot.iso $@
+		--add boot-image/container --ks $< --replace "CentOS Stream $(INSTALLER_SHORT_VERSION)" "$(IMAGE)" boot-image/CentOS-Stream-$(INSTALLER_VERSION)-aarch64-boot.iso $@
 
 .PHONY: iso
 iso: boot-image/bootc-install$(ISO_SUFFIX).iso
